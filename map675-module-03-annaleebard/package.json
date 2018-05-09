@@ -1,0 +1,16 @@
+{
+  "name": "map675-module-05",
+  "version": "1.0.0",
+  "description": "Lesson using Turf.js and other cool tricks",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "rgdonohue",
+  "license": "ISC",
+  "dependencies": {
+    "@turf/turf": "^5.1.6",
+    "chalk": "^2.4.1",
+    "csvtojson": "^1.1.11",
+    "geojson-validation": "^0.2.0"
+  }
+}
