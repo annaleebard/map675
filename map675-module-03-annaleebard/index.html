@@ -1,0 +1,169 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Module 03 Turf.js</title>
+    <link href='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            width: 100%;
+            top: 0;
+            bottom: 0;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="map"></div>
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <script src="https://d3js.org/d3-fetch.v1.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
+    <script src='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.js'></script>
+    <script>
+        var map = L.map('map', {
+            zoomSnap: .1,
+            center: [40.33077, -99.5182],
+            zoom: 4.2
+        });
+
+        // mapbox access token
+        var accessToken = 'pk.eyJ1IjoiYW5uYWxlZWJhcmQiLCJhIjoiY2lrOHFpcGt5MDN6a3V2a245YWJ2enpzMiJ9.2bPK_dWaz3fkEtISPdvQog';
+
+        // add mapbox tile layers using access token
+        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + accessToken, {
+            attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+            maxZoom: 18,
+            id: 'mapbox.light',
+            accessToken: accessToken
+        }).addTo(map);
+
+        // use d3-fetch to request the topojson
+        d3.json('data/counties.json')
+            .then(function (data) {
+                drawMap(data); // send data out of callback to a new function
+
+            });
+
+        function drawMap(data) {
+
+            // convert the TopoJSON to GeoJSON
+            var geojson = topojson.feature(data, data.objects.cb_2016_us_county_20m);
+
+            // add to our map
+            var counties = L.geoJson(geojson, {
+                style: function (feature, layer) {
+                    return {
+                        color: 'white',
+                        fillColor: '#448ee4',
+                        fillOpacity: '.7',
+                        weight: 1
+                    }
+                }
+
+            }).addTo(map);
+            console.log(data);
+            console.log(geojson);
+            console.log(counties);
+
+
+            // create a geocoder control object with options
+            var geoCoderControl = L.mapbox.geocoderControl('mapbox.places', {
+                accessToken: accessToken,
+                keepOpen: true,
+                autocomplete: true,
+                position: 'topright'
+            });
+
+            // add the geocoder to the map
+            map.addControl(geoCoderControl)
+
+            // listen for a selection and then invoke the callback function
+            geoCoderControl.on('select', function (result) {
+
+
+                // add a marker on the map
+                var searchResult = L.geoJson(result.feature).addTo(map);
+
+                // add and open tooltip
+                searchResult.bindTooltip(result.feature.place_name).openTooltip();
+
+                // loop through the county layers
+                counties.eachLayer(function (layer) {
+
+                    // convert Leaflet layer to geojson with Leaflet toGeoJSON() method
+                    var polyFeature = layer.toGeoJSON();
+
+                    // if the result's feature is inside the polygon
+                    if (turf.booleanPointInPolygon(result.feature, polyFeature,
+
+                        { ignoreBoundary: false }
+
+                    )) {
+
+                        // adjust the map pan/zoom to the county layer bounds
+                        map.flyToBounds(layer.getBounds(), {
+                            padding: [20, 20]
+                        });
+
+                        // when the map is zooming on the flyTo
+                        map.on('zoomend', function () {
+                            layer.setStyle({
+                                color: '#f0dc00',
+                                fill: false,
+                                weight: '3'
+                            }).bringToFront();
+                            findDistanceToCentroid(layer, result.feature);
+                        });
+
+                    }
+                });
+
+                function findDistanceToCentroid(countyPolygon, searchedFeature) {
+
+                    // access to the county layer and address feature here
+                    // convert Leaflet county back to GeoJSON
+                    var countyPolygon = counties.toGeoJSON();
+
+                    // use turf.centerOfMass to create a point feature at the centroid
+                    var center = turf.centerOfMass(countyPolygon);
+
+                    // use the centroid GeoJSON feature to create a Leaflet marker
+                    // and add it to the map
+                    L.marker(center.geometry.coordinates).addTo(map);
+                    console.log(center.geometry.coordinates)
+
+                    // use Turf to determine the distance in miles between the 
+                    // two markers. Hint: Turf wants GeoJSON!
+
+                    // bind the distance info to the centroid marker and open the tooltip
+
+
+
+
+
+                }
+
+
+            })
+
+        } // end drawMap
+
+
+
+
+    </script>
+</body>
+
+</html>

@@ -1,2 +1,4 @@
 # Dependency directories
 node_modules/
+# Large files
+project-files/NationalFile_20180401.txt
